@@ -1,0 +1,22 @@
+{
+  "name": "express_project",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "my first app using express js",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "author": "ABOULFATH IDRISSI BADR",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mongodb": "^7.0.0",
+    "mongoose": "^9.0.1",
+    "morgan": "^1.10.1",
+    "nodemon": "^3.1.11"
+  }
+}
