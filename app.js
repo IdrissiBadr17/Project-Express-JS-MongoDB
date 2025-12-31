@@ -3,7 +3,6 @@ import morgan from "morgan";
 import tourRouter from "./router/tourRouter.js";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import { MongoClient, ServerApiVersion } from "mongodb";
 
 // Load environment variables from .env file
 dotenv.config({ path: "./.env" });
@@ -34,6 +33,7 @@ connectMongoDB().then(() => {
 // This allows us to access req.body in POST requests
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
 app.use(express.static(`./public`));
 
@@ -58,52 +58,6 @@ const getAllUsers = (req, res) => {
 app.use("/api/v1/tours", tourRouter);
 
 app.route("/api/v1/users").get(getAllUsers);
-
-const tourSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "A tour must have a name"],
-    unique: true,
-  },
-  rating: {
-    type: Number,
-    default: 4.5,
-  },
-  price: {
-    type: Number,
-    required: [true, "A tour must have a price "],
-  },
-});
-const Tour = mongoose.model("Tour", tourSchema);
-
-const testTour = new Tour({
-  name: "The Forest",
-  rating: 4.7,
-  price: 4.99,
-});
-const testTour2 = new Tour({
-  name: "The Forest Hiker",
-  rating: 5.7,
-  price: 8.99,
-});
-
-testTour
-  .save()
-  .then((doc) => {
-    console.log("Tour saved successfully:", doc);
-  })
-  .catch((err) => {
-    console.error("Error saving tour:", err);
-  });
-
-testTour2
-  .save()
-  .then((doc) => {
-    console.log("Tour saved successfully:", doc);
-  })
-  .catch((err) => {
-    console.error("Error saving tour:", err);
-  });
 
 app.listen(PORT, () => {
   console.log(`App running on port: ${PORT}.....`);
