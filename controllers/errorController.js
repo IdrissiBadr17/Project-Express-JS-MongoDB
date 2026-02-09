@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import AppError from "../utils/appError.js";
 
 /* =======================
@@ -13,7 +14,7 @@ const sendErrorDev = (err, res) => {
 
 /* =======================
    MONGOOSE ERROR HANDLERS
-======================= */
+  ======================= */
 
 // Invalid MongoDB ObjectId
 const handleCastErrorDB = (err) => {
@@ -38,13 +39,22 @@ const handleValidationErrorDB = (err) => {
   return new AppError(message, 400);
 };
 
+// JWT Errors
+const handleJWTError = (err) => {
+  console.log("JWT error Detected....");
+  return new AppError("Invalid token. Please log in again!", 401);
+};
+
+// JWT Expired Errors
+const handleJWTExpiredError = (err) => {
+  console.log("JWT expired error Detected....");
+  return new AppError("Your token has expired! Please log in again.", 401);
+};
+
 /* =======================
    GLOBAL ERROR MIDDLEWARE
 ======================= */
 export const errorHandling = (err, req, res, next) => {
-  console.log("===========================")
-  console.log(err);
-  console.log("===========================")
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
   let error = { ...err, name: err.name, message: err.message };
@@ -52,6 +62,9 @@ export const errorHandling = (err, req, res, next) => {
   if (error.name === "CastError") error = handleCastErrorDB(error);
   if (error.code === 11000) error = handleDuplicateFieldsDB(error);
   if (error.name === "ValidationError") error = handleValidationErrorDB(error);
+
+  if (error.name === "JsonWebTokenError") error = handleJWTError(error);
+  if (error.name === "TokenExpiredError") error = handleJWTExpiredError(error);
 
   sendErrorDev(error, res);
 };

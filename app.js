@@ -1,10 +1,16 @@
 import express from "express";
 import morgan from "morgan";
 import tourRouter from "./router/tourRouter.js";
+import userRoute from "./router/userRouter.js";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import AppError from "./utils/appError.js";
 import { errorHandling } from "./controllers/errorController.js";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
+import xss from "xss-clean";
+import hpp from "hpp";
 
 // Load environment variables from .env file
 dotenv.config({ path: "./.env" });
@@ -34,6 +40,19 @@ connectMongoDB().then(() => {
 // Body parser, reading data from body into req.body
 // This allows us to access req.body in POST requests
 
+// 1- Limit requests from same API address
+const limiter = rateLimit({
+  max: 100, // max number of requests
+  windowMs: 60 * 60 * 1000, // 1 hour
+  message: "Too many requests from this IP, please try again in an hour!",
+});
+
+app.use("/api", limiter);
+
+// 2- Set security HTTP headers using helmet
+// helmet helps you secure your Express apps by setting various HTTP headers
+app.use(helmet());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
@@ -44,17 +63,33 @@ app.use((req, res, next) => {
   next();
 });
 
-const getAllUsers = (req, res) => {
-  res.status(500).json({
-    state: "error",
-    message: "This route is not yet defined!!",
-  });
-};
+// Data sanitization against NoSQL query injection
+// Prevents operators like $gt, $or, etc. from being used in req.body, req.query, etc.
+app.use(mongoSanitize());
+
+// Data sanitization against XSS
+// Clean user input from malicious HTML code
+app.use(xss());
+
+// Prevent parameter pollution
+// Protect against HTTP Parameter Pollution attacks
+// e.g., ?sort=price&sort=duration
+app.use(
+  hpp({
+    whitelist: [
+      "duration",
+      "ratingsQuantity",
+      "ratingsAverage",
+      "maxGroupSize",
+      "difficulty",
+      "price",
+    ],
+  }),
+);
 
 // Router Tour
 app.use("/api/v1/tours", tourRouter);
-
-app.route("/api/v1/users").get(getAllUsers);
+app.use("/api/v1/users", userRoute);
 
 app.use((req, res, next) => {
   console.log("i am herre .....");
@@ -66,7 +101,6 @@ app.use((req, res, next) => {
 });
 
 app.use(errorHandling);
-
 
 app.listen(PORT, () => {
   console.log(`App running on port: ${PORT}.....`);

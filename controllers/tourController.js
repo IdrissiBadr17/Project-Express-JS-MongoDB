@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import Tour from "../models/tourModels.js";
 import APIFeatures from "../utils/apiFeatures.js";
-import cathAsync from "../utils/catchAsync.js";
+import { catchAsync } from "../utils/catchAsyncFeature.js";
 import AppError from "../utils/appError.js";
 
 const aliasTopTours = (req, res, next) => {
@@ -11,7 +11,7 @@ const aliasTopTours = (req, res, next) => {
   next();
 };
 
-const getAllTours = cathAsync(async (req, res, next) => {
+const getAllTours = catchAsync(async (req, res, next) => {
   // EXECUTE QUERY
   const { page, limit } = req.query;
   const features = new APIFeatures(Tour.find(), req.query)
@@ -48,7 +48,7 @@ const getAllTours = cathAsync(async (req, res, next) => {
   });
 });
 
-const getTourById = cathAsync(async (req, res, next) => {
+const getTourById = catchAsync(async (req, res, next) => {
   const tour = await Tour.findById(req.params.id);
 
   if (!tour) {
@@ -65,7 +65,7 @@ const getTourById = cathAsync(async (req, res, next) => {
   });
 });
 
-const createTour = cathAsync(async (req, res, next) => {
+const createTour = catchAsync(async (req, res, next) => {
   const newTour = await Tour.create(req.body);
   res.status(201).json({
     status: "sucess",
@@ -75,7 +75,7 @@ const createTour = cathAsync(async (req, res, next) => {
   });
 });
 
-const updateTour = cathAsync(async (req, res, next) => {
+const updateTour = catchAsync(async (req, res, next) => {
   const updatedTour = await Tour.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
@@ -95,7 +95,7 @@ const updateTour = cathAsync(async (req, res, next) => {
   });
 });
 
-const deleteTour = cathAsync(async (req, res, next) => {
+const deleteTour = catchAsync(async (req, res, next) => {
   const deletedTour = await Tour.findByIdAndDelete(req.params.id);
 
   if (!deletedTour) {
@@ -110,7 +110,7 @@ const deleteTour = cathAsync(async (req, res, next) => {
 });
 
 /// Aggregate PipeLine
-const getTourStats = cathAsync(async (req, res, next) => {
+const getTourStats = catchAsync(async (req, res, next) => {
   const stats = await Tour.aggregate([
     {
       $match: { ratingsAverage: { $gte: 4.5 } },
@@ -139,7 +139,7 @@ const getTourStats = cathAsync(async (req, res, next) => {
   });
 });
 
-const getMonthlyPlan = cathAsync(async (req, res, next) => {
+const getMonthlyPlan = catchAsync(async (req, res, next) => {
   const year = req.params.year * 1;
   const plan = await Tour.aggregate([
     {
