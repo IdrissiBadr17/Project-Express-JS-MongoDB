@@ -1,5 +1,7 @@
 import fs from "fs";
 import Tour from "../models/tourModels.js";
+import User from "../models/UserModel.js";
+import Review from "../models/reviewsModel.js";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
@@ -24,33 +26,43 @@ connectMongoDB().then(() => {
 });
 
 const tourData = JSON.parse(
-  fs.readFileSync("./dev-data/data/tours-simple.json", "utf-8"),
+  fs.readFileSync("./dev-data/data/tours.json", "utf-8"),
+);
+const userData = JSON.parse(
+  fs.readFileSync("./dev-data/data/users.json", "utf-8"),
+);
+const reviewData = JSON.parse(
+  fs.readFileSync("./dev-data/data/reviews.json", "utf-8"),
 );
 
-const importTourData = async () => {
+const importData = async () => {
   try {
     await Tour.create(tourData);
-    console.log("Tour data successfully imported!");
+    await User.create(userData, { validateBeforeSave: false });
+    await Review.create(reviewData);
+    console.log("All data successfully imported!");
   } catch (err) {
-    console.error("Error importing tour data:", err);
-  }
-  process.exit();
-};
-const deleteTourData = async () => {
-  try {
-    await Tour.deleteMany();
-    console.log("Tour data successfully deleted!");
-  } catch (err) {
-    console.error("Error deleting tour data:", err);
+    console.error("Error importing data:", err);
   }
   process.exit();
 };
 
+const deleteData = async () => {
+  try {
+    await Tour.deleteMany();
+    await User.deleteMany();
+    await Review.deleteMany();
+    console.log("All data successfully deleted!");
+  } catch (err) {
+    console.error("Error deleting data:", err);
+  }
+  process.exit();
+};
 
 // Command line arguments handling
 
 if (process.argv[2] === "--import") {
-  importTourData();
+  importData();
 } else if (process.argv[2] === "--delete") {
-  deleteTourData();
+  deleteData();
 }

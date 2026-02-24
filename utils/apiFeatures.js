@@ -7,13 +7,21 @@ class ApiFeatures {
 
   filter() {
     // Build the query
-    const queryObj = qs.parse(this.queryString);
+    // `this.queryString` can be either a string (raw querystring)
+    // or an object (Express `req.query`). Handle both safely.
+
+    // console.log(typeof this.queryString); // object
+
+    const queryObj =
+      typeof this.queryString !== "string" ?
+        qs.parse(this.queryString)
+      : { ...this.queryString };
 
     // 1) Filtering
     const excludeFields = ["page", "sort", "limit", "fields"];
     excludeFields.forEach((e) => delete queryObj[e]);
 
-    // console.log(req.query, queryObj);
+    // console.log(this.queryString, queryObj);
 
     // const tours = await Tour.find({
     //   duration: { $eq: 5 },
@@ -21,7 +29,6 @@ class ApiFeatures {
     // });
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
-    // console.log(queryStr);
     this.query = this.query.find(JSON.parse(queryStr));
     return this;
   }
@@ -61,10 +68,14 @@ class ApiFeatures {
 
     // page=2&limit=10  ->
     // page 1: 1-10, page 2: 11-20, page 3: 21-30
-    const page = this.queryString.page * 1 || 1;
-    const limit = this.queryString.limit * 1 || 10;
-    const skip = (page - 1) * limit;
-    this.query = this.query.skip(skip).limit(limit);
+    
+    this.page = Number(this.queryString.page) || 1;
+    this.limit = Number(this.queryString.limit) || 10;
+
+    const skip = (this.page - 1) * this.limit;
+
+    this.query = this.query.skip(skip).limit(this.limit);
+
     return this;
   }
 }

@@ -8,9 +8,14 @@ import AppError from "./utils/appError.js";
 import { errorHandling } from "./controllers/errorController.js";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import mongoSanitize from "express-mongo-sanitize";
-import xss from "xss-clean";
+import reviewRouter from "./router/reviewRouter.js";
+
+import sanitize from "./utils/sanitize.js";
 import hpp from "hpp";
+
+// Documentation Swagger UI
+// import swaggerUi from "swagger-ui-express";
+// import swaggerSpec from "./swagger.js";
 
 // Load environment variables from .env file
 dotenv.config({ path: "./.env" });
@@ -65,11 +70,11 @@ app.use((req, res, next) => {
 
 // Data sanitization against NoSQL query injection
 // Prevents operators like $gt, $or, etc. from being used in req.body, req.query, etc.
-app.use(mongoSanitize());
+// ccurl http://localhost:3000/api/v1/tours/5c88fa8cf4afda39709c295a
 
 // Data sanitization against XSS
-// Clean user input from malicious HTML code
-app.use(xss());
+// Clean user input from malicious HTML code (safe in-place sanitizer)
+app.use(sanitize());
 
 // Prevent parameter pollution
 // Protect against HTTP Parameter Pollution attacks
@@ -90,6 +95,9 @@ app.use(
 // Router Tour
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRoute);
+app.use("/api/v1/reviews", reviewRouter);
+
+// app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use((req, res, next) => {
   console.log("i am herre .....");
@@ -102,24 +110,28 @@ app.use((req, res, next) => {
 
 app.use(errorHandling);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`App running on port: ${PORT}.....`);
 });
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {
   console.log("UNHANDLED REJECTION! 💥 Shutting down...");
-  console.log(err.name, err.message);
-  app.close(() => {
+  console.error(err);
+  if (server && typeof server.close === "function") {
+    server.close(() => process.exit(1));
+  } else {
     process.exit(1);
-  });
+  }
 });
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (err) => {
   console.log("UNCAUGHT EXCEPTION! 💥 Shutting down...");
-  console.log(err.name, err.message);
-  app.close(() => {
+  console.error(err);
+  if (server && typeof server.close === "function") {
+    server.close(() => process.exit(1));
+  } else {
     process.exit(1);
-  });
+  }
 });

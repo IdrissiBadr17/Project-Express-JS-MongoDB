@@ -1,6 +1,7 @@
 import User from "../models/UserModel.js";
 import { catchAsync } from "../utils/catchAsyncFeature.js";
 import AppError from "../utils/appError.js";
+import factory from "./handlerFactory.js";
 
 const filterObject = (obj, ...allowedFields) => {
   const newObj = {};
@@ -9,17 +10,24 @@ const filterObject = (obj, ...allowedFields) => {
   });
   return newObj;
 };
+const getMe = (req, res, next) => {
+  console.log("User:", req);
+  req.params.id = req.user.id;
+  next();
+};
 
-const getAllUsers = catchAsync(async (req, res) => {
-  const users = await User.find();
-  res.status(200).json({
-    status: "success",
-    results: users.length,
-    data: {
-      users,
-    },
-  });
-});
+// const getAllUsers = catchAsync(async (req, res) => {
+//   const users = await User.find();
+//   res.status(200).json({
+//     status: "success",
+//     results: users.length,
+//     data: {
+//       users,
+//     },
+//   });
+// });
+
+const getAllUsers = factory.getAll(User);
 
 // Update user details (excluding password)
 const updateUser = catchAsync(async (req, res, next) => {
@@ -51,16 +59,19 @@ const updateUser = catchAsync(async (req, res, next) => {
   });
 });
 
-// Soft delete user
-const deleteUser = catchAsync(async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(req.user.id, { active: false });
-  if (!user) {
-    return next(new AppError("No user found with that ID", 404));
-  }
-  res.status(204).json({
-    status: "success",
-    data: null,
-  });
-});
+const getUserById = factory.getOne(User);
 
-export { getAllUsers, updateUser, deleteUser };
+const deleteUser = factory.deleteOne(User);
+// // Soft delete user
+// const deleteUser = catchAsync(async (req, res, next) => {
+//   const user = await User.findByIdAndUpdate(req.user.id, { active: false });
+//   if (!user) {
+//     return next(new AppError("No user found with that ID", 404));
+//   }
+//   res.status(204).json({
+//     status: "success",
+//     data: null,
+//   });
+// });
+
+export { getAllUsers, updateUser, deleteUser, getUserById, getMe };

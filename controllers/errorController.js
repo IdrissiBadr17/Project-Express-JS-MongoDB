@@ -57,7 +57,12 @@ const handleJWTExpiredError = (err) => {
 export const errorHandling = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
-  let error = { ...err, name: err.name, message: err.message };
+
+  let error = {
+    ...err,
+    name: err.name,
+    message: err.message,
+  };
 
   if (error.name === "CastError") error = handleCastErrorDB(error);
   if (error.code === 11000) error = handleDuplicateFieldsDB(error);
