@@ -2,6 +2,24 @@ import User from "../models/UserModel.js";
 import { catchAsync } from "../utils/catchAsyncFeature.js";
 import AppError from "../utils/appError.js";
 import factory from "./handlerFactory.js";
+import multer from "multer";
+
+// Configure multer for file uploads
+const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "public/img/users");
+  },
+  filename: (req, file, cb) => {
+    console.log(`file: ${file}`);
+    const ext = file.mimetype.split("/")[1];
+    cb(null, `user-${req.user.id}-${Date.now()}.${ext}`);
+  },
+});
+
+// Filter to only allow image uploads
+const upload = multer({ storage: multerStorage });
+
+const uploadUserPhoto = upload.single("photo");
 
 const filterObject = (obj, ...allowedFields) => {
   const newObj = {};
@@ -11,7 +29,6 @@ const filterObject = (obj, ...allowedFields) => {
   return newObj;
 };
 const getMe = (req, res, next) => {
-  console.log("User:", req);
   req.params.id = req.user.id;
   next();
 };
@@ -74,4 +91,11 @@ const deleteUser = factory.deleteOne(User);
 //   });
 // });
 
-export { getAllUsers, updateUser, deleteUser, getUserById, getMe };
+export {
+  getAllUsers,
+  updateUser,
+  deleteUser,
+  getUserById,
+  getMe,
+  uploadUserPhoto,
+};

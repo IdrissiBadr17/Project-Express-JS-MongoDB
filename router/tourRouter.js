@@ -8,6 +8,8 @@ import {
   aliasTopTours,
   getTourStats,
   getMonthlyPlan,
+  getToursWithin,
+  getToursDistances,
 } from "../controllers/tourController.js";
 
 import { protect, restrictTo } from "../controllers/authController.js";
@@ -30,6 +32,12 @@ tourRouter.route("/tour-stats").get(getTourStats);
 tourRouter
   .route("/monthly-plan/:year")
   .get(protect, restrictTo("admin", "lead-guide", "guide"), getMonthlyPlan);
+
+tourRouter
+  .route("/tours-within/:distance/center/:latlng/unit/:unit")
+  .get(getToursWithin);
+
+tourRouter.route("/distances/:latlng/unit/:unit").get(getToursDistances);
 
 // Standard CRUD routes
 tourRouter

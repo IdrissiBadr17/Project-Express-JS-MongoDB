@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import Tour from "../models/tourModels.js";
-import APIFeatures from "../utils/apiFeatures.js";
 import { catchAsync } from "../utils/catchAsyncFeature.js";
 import AppError from "../utils/appError.js";
 import factory from "./handlerFactory.js";
@@ -171,6 +170,82 @@ const getMonthlyPlan = catchAsync(async (req, res, next) => {
   });
 });
 
+///tours-within/:distance/center/:latlng/unit/:unit
+// /tours-within/233/center/34.111745,-118.113491/unit/mi
+
+const getToursWithin = catchAsync(async (req, res, next) => {
+  const { distance, latlng, unit } = req.params;
+  const [lat, lng] = latlng.split(",");
+  // Convert distance to radians for geospatial query
+  // Earth radius in miles: 3963.2, Earth radius in kilometers: 6378.1
+  const radius = unit === "mi" ? distance / 3963.2 : distance / 6378.1;
+
+  if (!lat || !lng) {
+    return next(
+      new AppError(
+        "Please provide latitude and longitude in the format lat,lng.",
+        400,
+      ),
+    );
+  }
+
+  const tours = await Tour.find({
+    startLocation: {
+      $geoWithin: { $centerSphere: [[lng, lat], radius] }, // GeoJSON format is [longitude, latitude]
+    },
+  });
+  res.status(200).json({
+    status: "success",
+    results: tours.length,
+    data: {
+      tours,
+    },
+  });
+});
+
+// /distances/34.111745,-118.113491/unit/mi
+const getToursDistances = catchAsync(async (req, res, next) => {
+  const { latlng, unit } = req.params;
+  const [lat, lng] = latlng.split(",");
+  const multiplier = unit === "mi" ? 0.000621371 : 0.001; // Convert meters to miles or kilometers
+
+  if (!lat || !lng) {
+    return next(
+      new AppError(
+        "Please provide latitude and longitude in the format lat,lng.",
+        400,
+      ),
+    );
+  }
+
+  const distances = await Tour.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: "Point",
+          coordinates: [parseFloat(lng), parseFloat(lat)],
+        },
+        distanceField: "distance",
+        distanceMultiplier: multiplier,
+      },
+    },
+    {
+      $project: {
+        distance: 1,
+        name: 1,
+      },
+    },
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    results: distances.length,
+    data: {
+      distances,
+    },
+  });
+});
+
 export {
   getAllTours,
   getTourById,
@@ -180,4 +255,6 @@ export {
   aliasTopTours,
   getTourStats,
   getMonthlyPlan,
+  getToursWithin,
+  getToursDistances,
 };

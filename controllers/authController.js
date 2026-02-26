@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import User from "../models/UserModel.js";
 import { catchAsync } from "../utils/catchAsyncFeature.js";
 import jwt from "jsonwebtoken";
@@ -14,13 +15,25 @@ const signToken = (id) => {
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
 
-  res.cookie("jwt", token, {
+  // res.cookie("jwt", token, {
+  //   expires: new Date(
+  //     Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000, // convert days to milliseconds
+  //   ),
+  //   httpOnly: true,
+  //   // secure: true, // only send cookie on https // used when in Production
+  // });
+  // if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
+
+  const cookieOptions = {
     expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000,
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000, // convert days to milliseconds
     ),
     httpOnly: true,
-    // secure: true, // only send cookie on https // used when in Production
-  });
+  };
+  if (process.env.NODE_ENV === "production") cookieOptions.secure = true;
+
+  // Send the JWT as a cookie in the response
+  res.cookie("jwt", token, cookieOptions);
 
   user.password = undefined;
 
@@ -33,7 +46,6 @@ const createSendToken = (user, statusCode, res) => {
   });
 };
 
-// eslint-disable-next-line no-unused-vars
 const signUp = catchAsync(async (req, res, next) => {
   const newUser = await User.create({
     fullName: req.body.fullName,
@@ -144,7 +156,6 @@ const forgotPassword = catchAsync(async (req, res, next) => {
       status: "success",
       message: "Token sent to email!",
     });
-    // eslint-disable-next-line no-unused-vars
   } catch (err) {
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
@@ -202,10 +213,48 @@ const updatePassword = catchAsync(async (req, res, next) => {
 
 const logout = (req, res) => {
   res.cookie("jwt", "loggedout", {
-    expires: new Date(Date.now() + 10 * 1000),
+    expires: new Date(Date.now() + 10 * 1000), // expire in 10 seconds
     httpOnly: true,
   });
-  res.status(200).json({ status: "success" });
+  res.status(200).json({
+    status: "success",
+    message: "You have been logged out!",
+  });
+};
+
+// Only for rendered pages, no errors!
+// is LoggedIn middleware is for rendered pages,
+// it checks if the user is logged in and if so, it makes the user data available in the response locals.
+// It does not throw errors if the user is not logged in,
+// it simply calls next() to move on to the next middleware or route handler.
+const isLoggedIn = async (req, res, next) => {
+  if (req.cookies.jwt) {
+    try {
+      // 1) Verify token
+      const decoded = jwt.verify(req.cookies.jwt, process.env.JWT_SECRET);
+      // 2) Check if user still exists
+      const currentUser = await User.findById(decoded.id);
+      if (!currentUser) {
+        return next();
+      }
+      // 3) Check if user changed password after the token was issued
+      if (currentUser.changedPasswordAfter(decoded.iat)) {
+        return next(
+          new AppError(
+            "User recently changed password! Please log in again.",
+            401,
+          ),
+        );
+      }
+      // THERE IS A LOGGED IN USER
+      res.locals.user = currentUser;
+      return next();
+    } catch (err) {
+      return next();
+    }
+  } else {
+    next();
+  }
 };
 
 export {
@@ -217,4 +266,5 @@ export {
   forgotPassword,
   resetPassword,
   updatePassword,
+  isLoggedIn,
 };

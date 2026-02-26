@@ -128,6 +128,11 @@ tourSchema.index({ price: 1, ratingsAverage: -1 });
 // their slug, allowing for faster retrieval of tour data when accessed via URLs that include the slug.
 tourSchema.index({ slug: 1 });
 
+// Geospatial index for startLocation
+// Geospatial index is used to optimize queries that involve geospatial data, such as
+// finding tours within a certain distance from a given location.
+tourSchema.index({ startLocation: "2dsphere" });
+
 tourSchema.virtual("durationWeeks").get(function () {
   return this.duration / 7;
 });
@@ -179,11 +184,23 @@ tourSchema.pre(/^find/, function () {
 });
 
 // AGGREGATION MIDDLEWARE
-
 tourSchema.pre("aggregate", function () {
   console.log("Aggregation Middleware .....");
-  this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
-  console.log(this.pipeline());
+  // this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+  // console.log("before action ");
+  // console.log(this.pipeline());
+  // console.log("**********************************");
+  const firstStage = this.pipeline()[0];
+  if (firstStage && firstStage.$geoNear) {
+    // If the first stage is $geoNear, we need to add the $match stage after it
+    this.pipeline().splice(1, 0, { $match: { secretTour: { $ne: true } } });
+  } else {
+    // Otherwise, we can add the $match stage at the beginning of the pipeline
+    this.pipeline().unshift({ $match: { secretTour: { $ne: true } } });
+  }
+  // console.log("**********************************");
+  // console.log("after action ");
+  // console.log(this.pipeline());
 });
 
 const Tour = mongoose.model("Tour", tourSchema);
