@@ -3,7 +3,58 @@ import Tour from "../models/tourModels.js";
 import { catchAsync } from "../utils/catchAsyncFeature.js";
 import AppError from "../utils/appError.js";
 import factory from "./handlerFactory.js";
+import multer from "multer";
+import sharp from "sharp";
 
+// Store uploaded files in memory for processing with Sharp
+const multerStorage = multer.memoryStorage();
+
+// Filter to only allow image uploads
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new AppError("Not an image! Please upload only images.", 400), false);
+  }
+};
+
+// Initialize multer with the defined storage and file filter
+const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
+
+// Middleware to handle single file upload for user photo
+const uploadTourImages = upload.fields([
+  { name: "imageCover", maxCount: 1 },
+  { name: "images", maxCount: 3 },
+]);
+
+const resizeTourImages = catchAsync(async (req, res, next) => {
+  if (!req.files.imageCover || !req.files.images) return next();
+  // 1) Cover image
+  req.body.imageCover = `tour-${req.params.id}-${Date.now()}-cover.jpeg`;
+  await sharp(req.files.imageCover[0].buffer)
+    .resize(2000, 1333) // Resize to 2000x1333 pixels, maintaining aspect ratio 3:2
+    .toFormat("jpeg")
+    .jpeg({ quality: 90 })
+    .toFile(`public/img/tours/${req.body.imageCover}`);
+
+  // 2) Images
+  req.body.images = [];
+  await Promise.all(
+    req.files.images.map(async (img, i) => {
+      const filename = `tour-${req.params.id}-${Date.now()}-${i + 1}.jpeg`;
+      await sharp(img.buffer)
+        .resize(2000, 1333)
+        .toFormat("jpeg")
+        .jpeg({ quality: 90 })
+        .toFile(`public/img/tours/${filename}`);
+      req.body.images.push(filename);
+    }),
+  );
+
+  next();
+});
+
+// Aliasing middleware for top 5 cheap tours
 const aliasTopTours = (req, res, next) => {
   req.url =
     "/?sort=-ratingsAverage,price&fields=ratingsAverage,price,name,difficulty,summary&limit=5";
@@ -257,4 +308,6 @@ export {
   getMonthlyPlan,
   getToursWithin,
   getToursDistances,
+  uploadTourImages,
+  resizeTourImages,
 };

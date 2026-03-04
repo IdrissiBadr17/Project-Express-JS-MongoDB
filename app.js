@@ -9,6 +9,7 @@ import { errorHandling } from "./controllers/errorController.js";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import reviewRouter from "./router/reviewRouter.js";
+import bookingRouter from "./router/bookingRouter.js";
 
 import sanitize from "./utils/sanitize.js";
 import hpp from "hpp";
@@ -96,6 +97,7 @@ app.use(
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/reviews", reviewRouter);
+app.use("/api/v1/bookings", bookingRouter);
 
 // app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

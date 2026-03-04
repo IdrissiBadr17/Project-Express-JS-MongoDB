@@ -10,6 +10,8 @@ import {
   getMonthlyPlan,
   getToursWithin,
   getToursDistances,
+  uploadTourImages,
+  resizeTourImages,
 } from "../controllers/tourController.js";
 
 import { protect, restrictTo } from "../controllers/authController.js";
@@ -47,7 +49,13 @@ tourRouter
 tourRouter
   .route("/:id")
   .get(getTourById)
-  .patch(protect, restrictTo("admin", "lead-guide"), updateTour)
+  .patch(
+    protect,
+    restrictTo("admin", "lead-guide"),
+    uploadTourImages,
+    resizeTourImages,
+    updateTour,
+  )
   .delete(protect, restrictTo("admin", "lead-guide"), deleteTour);
 
 // Nested routes Reviews & Users

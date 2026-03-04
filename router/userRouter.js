@@ -16,6 +16,7 @@ import {
   getUserById,
   getMe,
   uploadUserPhoto,
+  resizeUserPhoto,
 } from "../controllers/userController.js";
 
 const userRoute = express.Router();
@@ -37,7 +38,9 @@ userRoute.use(protect);
 //Always put specific routes before dynamic routes.
 userRoute.route("/").get(getAllUsers);
 userRoute.route("/me").get(getMe, getUserById);
-userRoute.route("/updateMe").patch(uploadUserPhoto, updateUser);
+userRoute
+  .route("/updateMe")
+  .patch(uploadUserPhoto, resizeUserPhoto, updateUser);
 userRoute.route("/deleteMe").delete(deleteUser);
 userRoute.route("/:id").get(getUserById);
 

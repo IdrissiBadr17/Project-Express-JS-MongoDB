@@ -3,23 +3,51 @@ import { catchAsync } from "../utils/catchAsyncFeature.js";
 import AppError from "../utils/appError.js";
 import factory from "./handlerFactory.js";
 import multer from "multer";
+import sharp from "sharp";
 
 // Configure multer for file uploads
-const multerStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "public/img/users");
-  },
-  filename: (req, file, cb) => {
-    console.log(`file: ${file}`);
-    const ext = file.mimetype.split("/")[1];
-    cb(null, `user-${req.user.id}-${Date.now()}.${ext}`);
-  },
-});
+// const multerStorage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, "public/img/users");
+//   },
+//   filename: (req, file, cb) => {
+//     const ext = file.mimetype.split("/")[1];
+//     cb(null, `user-${req.user.id}-${Date.now()}.${ext}`);
+//   },
+// });
+
+// Store uploaded files in memory for processing with Sharp
+const multerStorage = multer.memoryStorage();
 
 // Filter to only allow image uploads
-const upload = multer({ storage: multerStorage });
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new AppError("Not an image! Please upload only images.", 400), false);
+  }
+};
 
+// Initialize multer with the defined storage and file filter
+const upload = multer({ storage: multerStorage, fileFilter: multerFilter });
+
+// Middleware to handle single file upload for user photo
 const uploadUserPhoto = upload.single("photo");
+
+const resizeUserPhoto = catchAsync(async (req, res, next) => {
+  if (!req.file) return next();
+
+  req.file.filename = `user-${req.user.id}-${Date.now()}.jpeg`;
+
+  // Here you can add code to resize the image using a library like Sharp
+  await sharp(req.file.buffer)
+    .resize(500, 500)
+    .toFormat("jpeg")
+    .jpeg({ quality: 90 })
+    .toFile(`public/img/users/${req.file.filename}`);
+
+  next();
+});
 
 const filterObject = (obj, ...allowedFields) => {
   const newObj = {};
@@ -59,15 +87,14 @@ const updateUser = catchAsync(async (req, res, next) => {
   }
   // Filtered out unwanted fields names that are not allowed to be updated
   const filteredBody = filterObject(req.body, "fullName", "email");
+  // If there's a file uploaded, add the filename to the filteredBody
+  if (req.file) filteredBody.photo = req.file.filename;
+  console.log(filteredBody);
   // Update user document
-  const updatedUser = await User.findByIdAndUpdate(
-    req.params.id,
-    filteredBody,
-    {
-      new: true,
-      runValidators: true,
-    },
-  );
+  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
+    new: true,
+    runValidators: true,
+  });
   res.status(200).json({
     status: "success",
     data: {
@@ -98,4 +125,5 @@ export {
   getUserById,
   getMe,
   uploadUserPhoto,
+  resizeUserPhoto,
 };
